@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <title>Page</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        @font-face {
+            font-family: "canger";
+            src: url("./res/canger.woff2") format("woff2");
+        }
+
+        /* 检查浏览器是否支持 WOFF2 格式 */
+        @supports not (font-family: "canger") {
+            @font-face {
+                font-family: "canger";
+                src: url("./res/canger.woff") format("woff");
+            }
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'canger';
+            /* cursor: url("./res/Arrow-1.compressed.png"), auto; */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="App"></div>
+    <!-- <script src="/main.js"></script> -->
+</body>
+
+</html>

@@ -128,3 +128,10 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+pageAdmin/node_modules
+pageClient/node_modules
+server/node_modules
+server/config.json
+server/database.db
+server/cookie
