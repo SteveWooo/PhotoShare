@@ -29,7 +29,12 @@ class PhotoShareServer {
         }
 
         // 静态文件
-        this.expressApp.use(`${this.config.basePath}/files`, express.static(this.config.photoRoot))
+        this.expressApp.use(`${this.config.basePath}/files`, express.static(this.config.photoRoot, {
+            maxAge: '1d', // 1 day
+            setHeaders: (res) => {
+                res.setHeader('Cache-Control', 'public, max-age=86400');
+            }
+        }))
         this.expressApp.use(`${this.config.basePath}/client`, express.static(`${__dirname}/../pageClient/dist`))
         this.expressApp.use(`${this.config.basePath}/handle`, express.static(`${__dirname}/../pageAdmin/dist`))
 
@@ -105,6 +110,7 @@ class PhotoShareServer {
         this.expressApp.get(`${this.config.basePath}/papi/get_path`, async (req, res) => {
             let { file_path } = req.query
             file_path = file_path.replace(/\./g, '') // 限制范围
+            file_path = decodeURIComponent(file_path)
             const realPath = path.join(this.config.photoRoot, file_path)
             try {
                 const dir = fs.readdirSync(realPath)
@@ -121,12 +127,13 @@ class PhotoShareServer {
                 }
                 res.send({
                     status: 2000,
+                    basePublicUrl: `${this.config.basePublicUrl}${this.config.basePath}/files${file_path}`,
                     dirs: dir
                 })
             } catch(e) {
                 res.send({
                     status: 4004,
-                    message: e.message
+                    // message: e.message
                 })
             }
         })

@@ -141,6 +141,7 @@ class DirPage extends React.Component {
             return (
                 <div key={filename} style={{
                     width: '7em',
+                    margin: '1em',
                     fontSize: '0.8em',
                     height: '7em',
                     display: 'flex',
@@ -157,13 +158,12 @@ class DirPage extends React.Component {
                 }} >
                     {
                         this.isImg(filename) ? (
-                            <a download={`${config.baseUrl}/files${this.state.currentPath}${filename}`}>
-                                <img style={{
-                                    width: '100%',
-                                }} onClick={() => {
-                                    this.onClickItem(filename)
-                                }} src={`${config.baseUrl}/files${this.state.currentPath}${filename}`} />
-                            </a>
+                            <img style={{
+                                maxWidth: '95%',
+                                maxHeight: '95%'
+                            }} onClick={() => {
+                                this.onClickItem(filename)
+                            }} src={`${config.baseUrl}/files${this.state.currentPath}${filename}`} />
                         ) : (
                             <div onClick={() => {
                                 this.onClickItem(filename)
@@ -172,39 +172,6 @@ class DirPage extends React.Component {
                             </div>
                         )
                     }
-                    {
-                        this.state.showQR ? (
-                            <div style={{
-                                width: '100vw',
-                                height: '100vh',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignContent: 'center',
-                                alignItems: 'center',
-                                position: 'absolute',
-                                backgroundColor: '#33333399',
-                                top: 0,
-                                left: 0
-                            }} onClick={() => {
-                                this.setState({
-                                    showQR: false,
-                                    qrPath: ''
-                                })
-                            }}>
-                                <QRCode
-                                    value={this.state.qrPath}// 生成二维码的内容
-                                    size={300} // 二维码的大小
-                                    fgColor="#000000" // 二维码的颜色
-                                    imageSettings={{ // 中间有图片logo
-                                        height: 60,
-                                        width: 60,
-                                        excavate: true
-                                    }}
-                                />
-                            </div>
-                        ) : null
-                    }
-
                 </div >
             )
         })
@@ -233,7 +200,7 @@ class DirPage extends React.Component {
                         }
                     </div>
                     <div>
-                        <FMButton text="二维码" onClick={() => {this.showQR()}}></FMButton>
+                        <FMButton text="二维码" onClick={() => { this.showQR() }}></FMButton>
                     </div>
                 </div>
                 <div style={{
@@ -245,6 +212,38 @@ class DirPage extends React.Component {
                 }}>
                     {fileList}
                 </div>
+                {
+                    this.state.showQR ? (
+                        <div style={{
+                            width: '100vw',
+                            height: '100vh',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignContent: 'center',
+                            alignItems: 'center',
+                            position: 'absolute',
+                            backgroundColor: '#33333399',
+                            top: 0,
+                            left: 0
+                        }} onClick={() => {
+                            this.setState({
+                                showQR: false,
+                                qrPath: ''
+                            })
+                        }}>
+                            <QRCode
+                                value={this.state.qrPath}// 生成二维码的内容
+                                size={300} // 二维码的大小
+                                fgColor="#000000" // 二维码的颜色
+                                imageSettings={{ // 中间有图片logo
+                                    height: 60,
+                                    width: 60,
+                                    excavate: true
+                                }}
+                            />
+                        </div>
+                    ) : null
+                }
             </div >
         )
     }

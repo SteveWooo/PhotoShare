@@ -39,7 +39,11 @@ const outputPath = `${__dirname}/dist`
 // 复制资源目录到目标目录
 const sourceResPath = `${__dirname}/src/res`
 const targetResPath = `${outputPath}/res`
-fs.rmdirSync(outputPath)
+try {
+    fs.rmdirSync(outputPath)
+} catch(e) {
+    
+}
 fs.mkdirSync(targetResPath, { recursive: true })
 const images = fs.readdirSync(sourceResPath)
 for(let i = 0; i < images.length; i++) {
