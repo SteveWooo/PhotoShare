@@ -1,6 +1,7 @@
 import React from 'react'
 import FMHeader from './components/Header.jsx'
 import axios from 'axios'
+import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch';
 
 function escapeHtml(text) {
     var map = {
@@ -34,23 +35,52 @@ export default class App extends React.Component {
             fileList: [],
             showBigImage: false,
             bigImageUrl: '',
+            compressed: false
         }
     }
 
     componentDidMount() {
         const filePath = getQueryVariable('file_path')
-        axios.get(`${config.baseUrl}/papi/get_path?file_path=${encodeURIComponent(filePath)}`).then(res => {
+        const path_index = getQueryVariable('path_index')
+        // axios.get(`${config.baseUrl}/papi/get_path?file_path=${encodeURIComponent(filePath)}`).then(res => {
+        //     if (res.data.status !== 2000) {
+        //         alert('faile:' + res.data.status)
+        //         return
+        //     }
+
+        //     const fileList = []
+        //     for (let i = 0; i < res.data.dirs.length; i++) {
+        //         let compressedPath = ''
+        //         if (res.data.basePublicUrl[res.data.basePublicUrl.length - 1] === '/') {
+        //             compressedPath = res.data.basePublicUrl.substring(0, res.data.basePublicUrl.length - 1) + '.compressed/'
+        //         } else {
+        //             compressedPath = res.data.basePublicUrl + '.compressed/'
+        //         }
+        //         fileList.push({
+        //             source: res.data.basePublicUrl + '/' + res.data.dirs[i],
+        //             compressed: compressedPath + res.data.dirs[i]
+        //         })
+        //     }
+        //     this.setState({
+        //         fileList: fileList,
+        //         compressed: res.data.compressed
+        //     })
+        // })
+        axios.get(`${config.baseUrl}/papi/get_file_list?path_index=${encodeURIComponent(path_index)}`).then(res => {
             if (res.data.status !== 2000) {
-                alert('faile:' + res.data.state)
+                alert('faile:' + res.data.status)
                 return
             }
-
             const fileList = []
-            for (let i = 0; i < res.data.dirs.length; i++) {
-                fileList.push(res.data.basePublicUrl + '/' + res.data.dirs[i])
+            for (let i = 0; i < res.data.file_list.length; i++) {
+                fileList.push({
+                    source: config.baseUrl + '/papi/get_file?path_index=' + path_index +
+                        '&filename=' + encodeURIComponent(res.data.file_list[i])
+                })
             }
             this.setState({
-                fileList: fileList
+                fileList: fileList,
+                compressed: res.data.is_compressed
             })
         })
     }
@@ -63,9 +93,9 @@ export default class App extends React.Component {
     }
 
     render() {
-        const fileList = this.state.fileList.map(url => {
+        const fileList = this.state.fileList.map(item => {
             return (
-                <div key={url} style={{
+                <div key={item.source} style={{
                     width: '8em',
                     height: '8em',
                     display: 'flex',
@@ -78,12 +108,12 @@ export default class App extends React.Component {
                     borderRadius: '5px',
                     boxShadow: '5px 5px 10px #666 ',
                 }} onClick={() => {
-                    this.showBigImage(url)
+                    this.showBigImage(item.source + '&origin=true')
                 }}>
                     <img style={{
                         maxWidth: '90%',
                         maxHeight: '90%'
-                    }} src={url} alt="" />
+                    }} src={item.source} alt="" />
                 </div>
             )
         })
@@ -133,20 +163,60 @@ export default class App extends React.Component {
                             position: 'fixed',
                             backgroundColor: '#33333399',
                             top: 0,
-                            left: 0
+                            left: 0,
+                            overflow: 'scroll'
                         }} onClick={() => {
-                            this.setState({
-                                showBigImage: false
-                            })
+                            // this.setState({
+                            //     showBigImage: false
+                            // })
                         }}>
-                            <img onClick={e => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                            }} style={{
-                                maxWidth: '95%',
-                                maxheight: '95%'
-                            }} src={this.state.bigImageUrl} alt="" />
+                            <TransformWrapper initialScale={1}
+                                minScale={0.5}
+                                initialPositionX={0}
+                                initialPositionY={0}
+                                contentStyle={{
+                                    maxWidth: '50%',
+                                    maxheight: '50%',
+                                    maxWidth: '95vh',
+                                    maxheihgt: '95vw',
+                                }} 
+                                onClick={e => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                }}>
+                                <TransformComponent onClick={e => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                }}>
+                                    <img style={{
+                                        maxWidth: '100%',
+                                        maxheight: '100%',
+                                        maxWidth: '95vh',
+                                        maxheihgt: '95vw',
+                                    }} src={this.state.bigImageUrl} alt="" onClick={e => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                    }} />
+                                </TransformComponent>
+                            </TransformWrapper>
+
+
                             长按保存原图
+
+                            {/* 关闭按钮 */}
+                            <div style={{
+                                position: 'fixed',
+                                fontSize: '4em',
+                                right: 10,
+                                top: 10,
+                                cursor: 'pointer'
+                            }} onClick={() => {
+                                this.setState({
+                                    showBigImage: false
+                                })
+                            }}>
+                                X
+                            </div>
                         </div>
                     ) : null
                 }

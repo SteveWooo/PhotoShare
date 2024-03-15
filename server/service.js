@@ -15,6 +15,8 @@ class PhotoShareServer {
 
     cookie = ''
 
+    indexCache = {} // 缓存索引 -> 目录路径
+
     constructor(config) {
         this.config = config
         this.database = new DataBase(config)
@@ -66,7 +68,7 @@ class PhotoShareServer {
                 status: 2000
             })
         })
-        // 获取目录
+        // 获取目录 
         this.expressApp.get(`${this.config.basePath}/api/get_path`, this.midAuth.bind(this), (req, res) => {
             const { file_path } = req.query
             const realPath = path.join(this.config.photoRoot, file_path)
@@ -84,14 +86,14 @@ class PhotoShareServer {
                 const result = await this.database.GetkeyByPhotoPath(file_path)
                 if (result.status !== 2000) {
                     res.send(result)
-                    return 
+                    return
                 }
                 const id = sha256(file_path)
-                if (result.data.length === 0) {
+                if (result.row.length === 0) {
                     // 创建目录索引
                     const createRes = await this.database.AddPhotoIndex(id, file_path)
                     res.send(createRes)
-                    return 
+                    return
                 } else {
                     // 返回现成
                     res.send({
@@ -99,44 +101,135 @@ class PhotoShareServer {
                         id: id
                     })
                 }
-             } catch(e) {
+            } catch (e) {
                 res.send({
                     status: 5000,
                     message: e.message
                 })
             }
         })
-        // (公开)获取目录
+        // (公开)获取目录 🚮废弃
         this.expressApp.get(`${this.config.basePath}/papi/get_path`, async (req, res) => {
             let { file_path } = req.query
             file_path = file_path.replace(/\./g, '') // 限制范围
-            file_path = decodeURIComponent(file_path)
-            const realPath = path.join(this.config.photoRoot, file_path)
+            for (let i = 0; i < 5; i++) {
+                let nextFilePath = decodeURIComponent(file_path)
+                if (nextFilePath === file_path) {
+                    file_path = nextFilePath
+                    break
+                }
+                file_path = nextFilePath
+            }
+            let realPath = path.join(this.config.photoRoot, file_path)
+            if (realPath[realPath.length - 1] === '/') {
+                realPath = realPath.substring(0, realPath.length - 1)
+            }
             try {
                 const dir = fs.readdirSync(realPath)
                 // 没有图片的目录不能返回
                 if (dir.length === 0 || (
                     dir[0].indexOf('.jpg') === -1 &&
                     dir[0].indexOf('.nef') === -1 &&
-                    dir[0].indexOf('.jpeg') === -1
+                    dir[0].indexOf('.jpeg') === -1 &&
+                    dir[0].indexOf('.JPG') === -1
                 )) {
                     res.send({
                         status: 4003
                     })
-                    return 
+                    return
                 }
+                const compressed = fs.existsSync(realPath + '.compressed')
                 res.send({
                     status: 2000,
                     basePublicUrl: `${this.config.basePublicUrl}${this.config.basePath}/files${file_path}`,
-                    dirs: dir
+                    dirs: dir,
+                    compressed: compressed
                 })
-            } catch(e) {
+            } catch (e) {
+                console.log(e)
                 res.send({
                     status: 4004,
                     // message: e.message
                 })
             }
         })
+
+
+        // 公开：获取文件列表
+        this.expressApp.get(`${this.config.basePath}/papi/get_file_list`, async (req, res) => {
+            const { path_index } = req.query
+            const indexCacheInfo = await this._getFileDirByIndex(path_index)
+            if (indexCacheInfo === undefined) {
+                res.send(404)
+                return 
+            }
+
+            // 返回目标目录下的文件列表
+            const fileList = fs.readdirSync(indexCacheInfo.realPath)
+            res.send({
+                status: 2000,
+                file_list: fileList,
+                is_compressed: indexCacheInfo.isCompressed
+            })
+
+        })
+
+        // 公开：获取具体文件，这里一般直接给img来设置src
+        /**
+         * @param origin 是否获取原图
+         * @param path_index 目录索引
+         * @param filename 文件名
+         */
+        this.expressApp.get(`${this.config.basePath}/papi/get_file`, async (req, res) => {
+            const { filename, path_index, origin } = req.query
+            const indexCacheInfo = await this._getFileDirByIndex(path_index)
+            if (indexCacheInfo === undefined) {
+                res.send(404)
+                return 
+            }
+            // 获取文件
+            let filePath
+            if (indexCacheInfo.isCompressed && !origin) {
+                filePath = path.join(indexCacheInfo.dirname, indexCacheInfo.basename + '.compressed', decodeURIComponent(filename))
+            } else {
+                filePath = path.join(indexCacheInfo.realPath, decodeURIComponent(filename))
+            }
+            fs.readFile(filePath, (err, data) => {
+                if (err) {
+                    res.send(403)
+                    return
+                }
+                res.send(data)
+            })
+        })
+    }
+
+    async _getFileDirByIndex(path_index) {
+        // 检查是否有缓存
+        let filepathRes
+        if (this.indexCache[path_index] === undefined) {
+            filepathRes = await this.database.GetPhotoPathByKey(path_index)
+            if (filepathRes.status !== 2000 || filepathRes.row.length <= 0) {
+                return undefined
+            }
+            // 建立缓存
+            // 获取目标文件夹下的图片文件
+            const filePath = filepathRes.row[0].path
+            let realPath = path.join(this.config.photoRoot, filePath)
+            const basename = path.basename(realPath) // 目标文件夹名
+            const dirname = path.dirname(realPath) // 目标目录名
+            // 检查是否有压缩目录：
+            let isCompressed = false
+            if (fs.existsSync(path.join(dirname, basename + '.compressed'))) {
+                isCompressed = true
+            }
+
+            this.indexCache[path_index] = {
+                filePath, realPath, basename, dirname, isCompressed
+            }
+        }
+
+        return this.indexCache[path_index]
     }
 
     async midAuth(req, res, next) {

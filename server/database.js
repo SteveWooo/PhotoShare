@@ -62,6 +62,7 @@ class DataBase {
     }
     GetPhotoPathByKey(id) {
         return new Promise(resolve => {
+            id = id.replace(/[^a-zA-Z0-9]/g, '')
             this.db.all(`SELECT * FROM PhotoIndex WHERE id = ?`, [id], (err, row) => {
                 if (err) {
                     log.err(err.message)

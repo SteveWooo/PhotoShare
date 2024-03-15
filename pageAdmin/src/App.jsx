@@ -72,7 +72,10 @@ class DirPage extends React.Component {
             currentPath: '/',
             fileList: [],
             showQR: false,
-            qrPath: ''
+            qrPath: '',
+
+            showBigImg: false,
+            bigImgSrc: ''
         }
     }
 
@@ -100,7 +103,10 @@ class DirPage extends React.Component {
 
     onClickItem(name) {
         if (this.isImg(name)) {
-            console.log('do download')
+            this.setState({
+                showBigImg: true,
+                bigImgSrc: `${config.baseUrl}/files${this.state.currentPath}${name}`
+            })
             return
         }
         this.setState({
@@ -111,33 +117,62 @@ class DirPage extends React.Component {
     }
 
     isImg(name) {
-        if (name.indexOf('.jpg') === name.length - 4 || name.indexOf('.jpeg') === name.length - 5) {
+        if (
+            name.indexOf('.jpg') !== -1 ||
+            name.indexOf('.jpeg') !== -1 ||
+            name.indexOf('.JPG') !== -1
+        ) {
             return true
         }
         return false
     }
 
     goBack() {
-        let currentPath = this.state.currentPath.substring(0, this.state.currentPath.lastIndexOf('/'))
-        currentPath = currentPath.substring(0, currentPath.lastIndexOf('/'))
-        if (currentPath === '') currentPath = '/'
+        let currentPath = this.state.currentPath.split('/')
+        let targetPath = ''
+        if (currentPath.length === 0) {
+            targetPath = '/'
+        } else {
+            currentPath.pop(1)
+            currentPath.pop(1)
+            targetPath = currentPath.join('/') + '/'
+        }
         this.setState({
-            currentPath: currentPath
+            currentPath: targetPath
         }, () => {
             this.updateList()
         })
     }
     showQR() {
         const file_path = encodeURIComponent(this.state.currentPath)
-        const url = config.baseUrl + '/client?file_path=' + file_path
-        this.setState({
-            qrPath: url,
-            showQR: true
+        // const url = config.baseUrl + '/client?file_path=' + file_path
+        // this.setState({
+        //     qrPath: url,
+        //     showQR: true
+        // })
+
+        // 创建索引
+        axios.get(`/photo_share/api/create_path_index?file_path=${this.state.currentPath}`).then(r => {
+            if (r.data.status === 2000) {
+                const url = config.baseUrl + '/client?path_index=' + r.data.id
+                this.setState({
+                    qrPath: url,
+                    showQR: true
+                })
+            }
         })
     }
 
     render() {
         const fileList = this.state.fileList.map(filename => {
+            if (
+                filename.indexOf('.NEF') !== -1 ||
+                filename.indexOf('.acr') !== -1 ||
+                filename.indexOf('.xmp') !== -1 ||
+                filename.indexOf('.dng') !== -1
+            ) {
+                return
+            }
             return (
                 <div key={filename} style={{
                     width: '7em',
@@ -155,19 +190,17 @@ class DirPage extends React.Component {
                     boxShadow: '2px 5px 5px #f30ba4',
                     cursor: 'default',
                     userSelect: 'none'
-                }} >
+                }} onClick={() => {
+                    this.onClickItem(filename)
+                }}>
                     {
                         this.isImg(filename) ? (
                             <img style={{
                                 maxWidth: '95%',
                                 maxHeight: '95%'
-                            }} onClick={() => {
-                                this.onClickItem(filename)
                             }} src={`${config.baseUrl}/files${this.state.currentPath}${filename}`} />
                         ) : (
-                            <div onClick={() => {
-                                this.onClickItem(filename)
-                            }}>
+                            <div >
                                 {filename}
                             </div>
                         )
@@ -241,6 +274,32 @@ class DirPage extends React.Component {
                                     excavate: true
                                 }}
                             />
+                        </div>
+                    ) : null
+                }
+                {/* 大图 */}
+                {
+                    this.state.showBigImg ? (
+                        <div style={{
+                            width: '100vw',
+                            height: '100vh',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignContent: 'center',
+                            alignItems: 'center',
+                            position: 'absolute',
+                            backgroundColor: '#33333399',
+                            top: 0,
+                            left: 0
+                        }} onClick={() => {
+                            this.setState({
+                                showBigImg: false
+                            })
+                        }}>
+                            <img style={{
+                                maxWidth: '95%',
+                                maxHeight: '95%'
+                            }} src={this.state.bigImgSrc} />
                         </div>
                     ) : null
                 }
