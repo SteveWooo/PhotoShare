@@ -6,14 +6,14 @@ import sha256 from 'js-sha256'
 import QRCode from 'qrcode.react';
 
 const config = {
-    baseUrl: 'http://deadfishcrypto.tpddns.cn:20000/photo_share'
-    // baseUrl: 'http://localhost:2010/photo_share'
+    // baseUrl: 'http://deadfishcrypto.tpddns.cn:20000/photo_share'
+    // baseUrl: 'http://localhost:2010/photo_share',
+    baseUrl: '/photo_share'
 }
 
 class LoginPage extends React.Component {
     constructor(p) {
         super(p)
-
         this.inputRef = React.createRef()
     }
 
@@ -152,7 +152,10 @@ class DirPage extends React.Component {
         // })
 
         // 创建索引
-        axios.get(`/photo_share/api/create_path_index?file_path=${this.state.currentPath}`).then(r => {
+        const instance = axios.create({
+            timeout: 0, // 或者可以设置为 null
+        });
+        instance.get(`/photo_share/api/create_path_index?file_path=${this.state.currentPath}`).then(r => {
             if (r.data.status === 2000) {
                 const url = config.baseUrl + '/client?path_index=' + r.data.id
                 this.setState({
@@ -195,10 +198,13 @@ class DirPage extends React.Component {
                 }}>
                     {
                         this.isImg(filename) ? (
-                            <img style={{
-                                maxWidth: '95%',
-                                maxHeight: '95%'
-                            }} src={`${config.baseUrl}/files${this.state.currentPath}${filename}`} />
+                            // <img style={{
+                            //     maxWidth: '95%',
+                            //     maxHeight: '95%'
+                            // }} src={`${config.baseUrl}/files${this.state.currentPath}${filename}`} />
+                            <div>
+                                {filename}
+                            </div>
                         ) : (
                             <div >
                                 {filename}
@@ -251,6 +257,7 @@ class DirPage extends React.Component {
                             width: '100vw',
                             height: '100vh',
                             display: 'flex',
+                            flexDirection: 'column',
                             justifyContent: 'center',
                             alignContent: 'center',
                             alignItems: 'center',
@@ -274,6 +281,11 @@ class DirPage extends React.Component {
                                     excavate: true
                                 }}
                             />
+                            <div>
+                                <a href={this.state.qrPath}>
+                                    go
+                                </a>
+                            </div>
                         </div>
                     ) : null
                 }

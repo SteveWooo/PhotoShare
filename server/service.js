@@ -6,6 +6,7 @@ const cookirParser = require('cookie-parser')
 const sha256 = require('js-sha256')
 const { DataBase } = require('./database')
 const { log } = require('./log')
+const sharp = require('sharp');
 
 
 class PhotoShareServer {
@@ -89,9 +90,12 @@ class PhotoShareServer {
                     return
                 }
                 const id = sha256(file_path)
+                // 压缩目录下的文件
+                await this._compressFiles(file_path)
                 if (result.row.length === 0) {
                     // 创建目录索引
                     const createRes = await this.database.AddPhotoIndex(id, file_path)
+
                     res.send(createRes)
                     return
                 } else {
@@ -109,50 +113,50 @@ class PhotoShareServer {
             }
         })
         // (公开)获取目录 🚮废弃
-        this.expressApp.get(`${this.config.basePath}/papi/get_path`, async (req, res) => {
-            let { file_path } = req.query
-            file_path = file_path.replace(/\./g, '') // 限制范围
-            for (let i = 0; i < 5; i++) {
-                let nextFilePath = decodeURIComponent(file_path)
-                if (nextFilePath === file_path) {
-                    file_path = nextFilePath
-                    break
-                }
-                file_path = nextFilePath
-            }
-            let realPath = path.join(this.config.photoRoot, file_path)
-            if (realPath[realPath.length - 1] === '/') {
-                realPath = realPath.substring(0, realPath.length - 1)
-            }
-            try {
-                const dir = fs.readdirSync(realPath)
-                // 没有图片的目录不能返回
-                if (dir.length === 0 || (
-                    dir[0].indexOf('.jpg') === -1 &&
-                    dir[0].indexOf('.nef') === -1 &&
-                    dir[0].indexOf('.jpeg') === -1 &&
-                    dir[0].indexOf('.JPG') === -1
-                )) {
-                    res.send({
-                        status: 4003
-                    })
-                    return
-                }
-                const compressed = fs.existsSync(realPath + '.compressed')
-                res.send({
-                    status: 2000,
-                    basePublicUrl: `${this.config.basePublicUrl}${this.config.basePath}/files${file_path}`,
-                    dirs: dir,
-                    compressed: compressed
-                })
-            } catch (e) {
-                console.log(e)
-                res.send({
-                    status: 4004,
-                    // message: e.message
-                })
-            }
-        })
+        // this.expressApp.get(`${this.config.basePath}/papi/get_path`, async (req, res) => {
+        //     let { file_path } = req.query
+        //     file_path = file_path.replace(/\./g, '') // 限制范围
+        //     for (let i = 0; i < 5; i++) {
+        //         let nextFilePath = decodeURIComponent(file_path)
+        //         if (nextFilePath === file_path) {
+        //             file_path = nextFilePath
+        //             break
+        //         }
+        //         file_path = nextFilePath
+        //     }
+        //     let realPath = path.join(this.config.photoRoot, file_path)
+        //     if (realPath[realPath.length - 1] === '/') {
+        //         realPath = realPath.substring(0, realPath.length - 1)
+        //     }
+        //     try {
+        //         const dir = fs.readdirSync(realPath)
+        //         // 没有图片的目录不能返回
+        //         if (dir.length === 0 || (
+        //             dir[0].indexOf('.jpg') === -1 &&
+        //             dir[0].indexOf('.nef') === -1 &&
+        //             dir[0].indexOf('.jpeg') === -1 &&
+        //             dir[0].indexOf('.JPG') === -1
+        //         )) {
+        //             res.send({
+        //                 status: 4003
+        //             })
+        //             return
+        //         }
+        //         const compressed = fs.existsSync(realPath + '.compressed')
+        //         res.send({
+        //             status: 2000,
+        //             basePublicUrl: `${this.config.basePublicUrl}${this.config.basePath}/files${file_path}`,
+        //             dirs: dir,
+        //             compressed: compressed
+        //         })
+        //     } catch (e) {
+        //         console.log(e)
+        //         res.send({
+        //             status: 4004,
+        //             // message: e.message
+        //         })
+        //     }
+        // })
 
 
         // 公开：获取文件列表
@@ -160,8 +164,8 @@ class PhotoShareServer {
             const { path_index } = req.query
             const indexCacheInfo = await this._getFileDirByIndex(path_index)
             if (indexCacheInfo === undefined) {
-                res.send(404)
-                return 
+                res.sendStatus(404)
+                return
             }
 
             // 返回目标目录下的文件列表
@@ -181,11 +185,12 @@ class PhotoShareServer {
          * @param filename 文件名
          */
         this.expressApp.get(`${this.config.basePath}/papi/get_file`, async (req, res) => {
-            const { filename, path_index, origin } = req.query
+            let { filename, path_index, origin } = req.query
+            filename = filename.replace(/\//g, '').replace(/\\/g, '').replace(/\.\./g, '')
             const indexCacheInfo = await this._getFileDirByIndex(path_index)
             if (indexCacheInfo === undefined) {
                 res.send(404)
-                return 
+                return
             }
             // 获取文件
             let filePath
@@ -196,12 +201,187 @@ class PhotoShareServer {
             }
             fs.readFile(filePath, (err, data) => {
                 if (err) {
-                    res.send(403)
+                    res.sendStatus(403)
                     return
                 }
                 res.send(data)
             })
         })
+
+        /**
+         * 选片目录获取
+         * @param custom_path 客户目录
+         */
+        this.expressApp.get(`${this.config.basePath}/papi/get_custom_files`, async (req, res) => {
+            let { custom_path, is_selected } = req.query
+            custom_path = custom_path.replace(/\//g, '').replace(/\\/g, '').replace(/\./g, '')
+            // 检查目录是否存在
+            if (!fs.existsSync(path.join(this.config.photoRoot, 'Custom', custom_path))) {
+                res.sendStatus(404)
+                return
+            }
+
+            // 创建一下已选目录
+            if (!fs.existsSync(
+                path.join(this.config.photoRoot, 'Custom', custom_path, 'selected')
+            )) {
+                fs.mkdirSync(
+                    path.join(this.config.photoRoot, 'Custom', custom_path, 'selected')
+                )
+            }
+            // 并且返回已选目录
+            const selectedFiles = fs.readdirSync(
+                path.join(this.config.photoRoot, 'Custom', custom_path, 'selected')
+            )
+
+            try {
+                const fileList = fs.readdirSync(
+                    path.join(
+                        this.config.photoRoot, 'Custom', custom_path,
+                        is_selected === 'true' ? 'selected' : ''
+                    )
+                )
+                for (let i = 0; i < fileList.length; i++) {
+                    if (!(await this._isImage(fileList[i]))) {
+                        fileList.splice(i, 1)
+                        i--;
+                        continue
+                    }
+                }
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    if (!(await this._isImage(selectedFiles[i]))) {
+                        selectedFiles.splice(i, 1)
+                        i--;
+                        continue
+                    }
+                }
+                res.send({
+                    status: 2000,
+                    file_list: fileList,
+                    selected_files: selectedFiles,
+                })
+            } catch (e) {
+                res.sendStatus(404)
+            }
+        })
+        /**
+         * 返回图片文件
+         */
+        this.expressApp.get(`${this.config.basePath}/papi/get_custom_file`, async (req, res) => {
+            let { custom_path, is_selected, file_name } = req.query
+            custom_path = custom_path.replace(/\//g, '').replace(/\\/g, '').replace(/\./g, '')
+            file_name = file_name.replace(/\//g, '').replace(/\\/g, '').replace(/\.\./g, '')
+            try {
+                const sourceFilePath = path.join(
+                    this.config.photoRoot, 'Custom', custom_path,
+                    is_selected === 'true' ? 'selected' : '', file_name
+                )
+                if (!fs.existsSync(sourceFilePath)) {
+                    res.sendStatus(404)
+                    return
+                }
+
+                fs.readFile(sourceFilePath, (err, data) => {
+                    if (err) {
+                        res.sendStatus(403)
+                        return
+                    }
+                    res.send(data)
+                })
+            } catch (e) {
+                console.log(e)
+                res.sendStatus(404)
+            }
+        })
+
+        /**
+         * 选片操作
+         */
+        this.expressApp.get(`${this.config.basePath}/papi/select_custom_file`, async (req, res) => {
+            let { custom_path, file_name } = req.query
+            custom_path = custom_path.replace(/\//g, '').replace(/\\/g, '').replace(/\./g, '')
+            file_name = file_name.replace(/\//g, '').replace(/\\/g, '').replace(/\.\./g, '')
+            try {
+                const sourceFilePath = path.join(
+                    this.config.photoRoot, 'Custom', custom_path, file_name
+                )
+                const targetFilePath = path.join(
+                    this.config.photoRoot, 'Custom', custom_path, 'selected', file_name
+                )
+                if (!fs.existsSync(sourceFilePath)) {
+                    res.sendStatus(404)
+                    return
+                }
+
+                // 选片，放入目录
+                fs.cpSync(sourceFilePath, targetFilePath)
+
+                // 写Log
+                const logPath = path.join(
+                    this.config.photoRoot, 'Custom', custom_path, 'selected', 'log.txt'
+                )
+                if (!fs.existsSync(logPath)) {
+                    fs.writeFileSync(logPath, '')
+                }
+                fs.appendFileSync(logPath, `select ${file_name}\n`)
+
+                res.send({
+                    status: 2000
+                })
+            } catch (e) {
+                console.log(e)
+                res.sendStatus(404)
+            }
+        })
+
+        /**
+         * 弃片操作
+         */
+        this.expressApp.get(`${this.config.basePath}/papi/unselect_custom_file`, async (req, res) => {
+            let { custom_path, file_name } = req.query
+            custom_path = custom_path.replace(/\//g, '').replace(/\\/g, '').replace(/\./g, '')
+            file_name = file_name.replace(/\//g, '').replace(/\\/g, '').replace(/\.\./g, '')
+            try {
+                const targetFilePath = path.join(
+                    this.config.photoRoot, 'Custom', custom_path, 'selected', file_name
+                )
+                if (!fs.existsSync(targetFilePath)) {
+                    res.sendStatus(404)
+                    return
+                }
+
+                // 删片
+                fs.rmSync(targetFilePath)
+                // 写Log
+                const logPath = path.join(
+                    this.config.photoRoot, 'Custom', custom_path, 'selected', 'log.txt'
+                )
+                if (!fs.existsSync(logPath)) {
+                    fs.writeFileSync(logPath, '')
+                }
+                fs.appendFileSync(logPath, `unselect ${file_name}\n`)
+
+                res.send({
+                    status: 2000
+                })
+            } catch (e) {
+                console.log(e)
+                res.sendStatus(404)
+            }
+        })
+    }
+
+    async _isImage(fileName) {
+        if (
+            fileName.indexOf('jpg') === -1 &&
+            fileName.indexOf('jpeg') === -1 &&
+            fileName.indexOf('png') === -1 &&
+            fileName.indexOf('JPG') === -1 &&
+            fileName.indexOf('JPEG') === -1
+        ) {
+            return false
+        }
+        return true
     }
 
     async _getFileDirByIndex(path_index) {
@@ -230,6 +410,50 @@ class PhotoShareServer {
         }
 
         return this.indexCache[path_index]
+    }
+
+    async _compressFiles(inputDir) {
+        return new Promise(resolve => {
+            const outputDir = path.join(this.config.photoRoot, path.dirname(inputDir), path.basename(inputDir) + '.compressed')
+            if (inputDir.indexOf('.compressed') !== -1) {
+                resolve()
+                return
+            }
+
+            const files = fs.readdirSync(path.join(this.config.photoRoot, inputDir));
+            // 只有全部都是jpg的图片或者jpeg的图片，才能压缩
+            const regex = /\.(jpeg|jpg)$/i
+            for (let i = 0; i < files.length; i++) {
+                if (!regex.test(files[i])) {
+                    resolve()
+                    return
+                }
+            }
+
+            if (fs.existsSync(outputDir) === true) {
+                resolve()
+                return;
+            } else {
+                fs.mkdirSync(outputDir, {mode: 0o777});
+            }
+
+            let counter = 0
+            files.forEach(file => {
+                sharp(path.join(this.config.photoRoot, inputDir, file))
+                    .resize(128) // 设置图片宽度
+                    .toFile(path.join(outputDir, file), (err, info) => {
+                        if (err) {
+                            console.error(err)
+                        }
+                        // console.log(info);
+                        counter++
+                        if (counter >= files.length) {
+                            resolve()
+                            return
+                        }
+                    });
+            });
+        })
     }
 
     async midAuth(req, res, next) {

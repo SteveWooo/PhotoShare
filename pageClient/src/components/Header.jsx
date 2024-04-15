@@ -45,21 +45,27 @@ export default class FMHEADER extends React.Component {
         return itemStyle
     }
 
+    style() {
+        const style = {
+            width: '100%',
+            height: '50px',
+            backgroundColor: '#eadec4',
+            // backgroundColor: '#95a9df',
+            boxShadow: '0em 0.1em 3px #c4f2f3',
+            // borderBottom: '1px solid #fff',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            alignContent: 'center',
+            justifyContent: 'flex-start',
+        }
+
+        return Object.assign({}, style, this.props.style)
+    }
+
     render() {
         return (
-            <div style={{
-                width: '100%',
-                height: '50px',
-                backgroundColor: '#eadec4',
-                // backgroundColor: '#95a9df',
-                boxShadow: '0em 0.1em 3px #c4f2f3',
-                // borderBottom: '1px solid #fff',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                alignContent: 'center',
-                justifyContent: 'flex-start',
-            }}>
+            <div style={this.style()}>
                 {/* <div style={this.iconStyle()}></div> */}
                 <FMLabel
                     text={'鱼昕草™Studio'}
