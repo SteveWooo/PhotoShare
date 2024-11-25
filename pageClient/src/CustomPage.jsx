@@ -63,7 +63,7 @@ export default class CustomPage extends React.Component {
 
     showBigImage(url, fileName) {
         this.setState({
-            bigImageUrl: url,
+            bigImageUrl: url + '&origin=true',
             bigImageFileName: fileName,
             showBigImage: true
         })
@@ -253,7 +253,6 @@ export default class CustomPage extends React.Component {
                         }}>
                             <TransformWrapper initialScale={1}
                                 minScale={0.5}
-                                maxScale={3}
                                 initialPositionX={0}
                                 initialPositionY={0}
                                 contentStyle={{
@@ -261,16 +260,23 @@ export default class CustomPage extends React.Component {
                                     maxheihgt: '95vw',
                                 }}
                                 onClick={e => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
+                                    // e.preventDefault()
+                                    // e.stopPropagation()
                                 }}>
                                 <TransformComponent onClick={e => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
+                                    // e.preventDefault()
+                                    // e.stopPropagation()
                                 }}>
-                                    <img src={this.state.bigImageUrl} alt="" onClick={e => {
-                                        e.preventDefault()
-                                        e.stopPropagation()
+                                    <img style={{
+                                        maxWidth: '100%',
+                                        maxheight: '100%',
+                                        maxWidth: '95vh',
+                                        maxheihgt: '95vw',
+                                        width: '100%',
+                                        height: '100%'
+                                    }} src={this.state.bigImageUrl} alt="" onClick={e => {
+                                        // e.preventDefault()
+                                        // e.stopPropagation()
                                     }} />
                                 </TransformComponent>
                             </TransformWrapper>

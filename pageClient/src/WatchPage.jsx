@@ -141,7 +141,7 @@ export default class WatchPage extends React.Component {
                             alignItems: 'center',
                             alignContent: 'center',
                             position: 'fixed',
-                            backgroundColor: '#33333399',
+                            backgroundColor: '#333333ee',
                             top: 0,
                             left: 0,
                             overflow: 'scroll'
@@ -184,7 +184,7 @@ export default class WatchPage extends React.Component {
                             {/* 关闭按钮 */}
                             <div style={{
                                 position: 'fixed',
-                                fontSize: '4em',
+                                fontSize: '2em',
                                 right: 10,
                                 top: 10,
                                 cursor: 'pointer'
@@ -193,14 +193,33 @@ export default class WatchPage extends React.Component {
                                     showBigImage: false
                                 })
                             }}>
-                                X
+                                <div style={{
+                                    width: '1.5em',
+                                    height: '1.5em',
+                                    backgroundColor: '#e0c94f',
+                                    color: '#fff',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignContent: 'center',
+                                    alignItems: 'center',
+                                    borderRadius: '50%'
+                                }}>
+                                    <svg width="25" height="25" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                        <line x1="10" y1="10" x2="90" y2="90" stroke="#fff" stroke-width="25" />
+                                        <line x1="10" y1="90" x2="90" y2="10" stroke="#fff" stroke-width="25" />
+                                    </svg>
+                                </div>
                             </div>
                             {/* 下载按钮 */}
                             <div style={{
                                 position: 'fixed',
-                                fontSize: '4em',
-                                left: 10,
-                                top: 10,
+                                fontSize: '1.5em',
+                                // width: '100vw',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                left: 20,
+                                bottom: 10,
                                 cursor: 'pointer'
                             }} onClick={() => {
                                 const downloadLink = document.createElement('a');
@@ -223,7 +242,19 @@ export default class WatchPage extends React.Component {
                                 // 下载完成后移除链接元素
                                 document.body.removeChild(downloadLink);
                             }}>
-                                下载
+                                <div style={{
+                                    width: '3.5em',
+                                    height: '2em',
+                                    backgroundColor: '#e0c94f',
+                                    color: '#fff',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignContent: 'center',
+                                    alignItems: 'center',
+                                    borderRadius: '10px'
+                                }}>
+                                    下载
+                                </div>
                             </div>
                         </div>
                     ) : null

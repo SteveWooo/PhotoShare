@@ -268,17 +268,24 @@ class PhotoShareServer {
          * 返回图片文件
          */
         this.expressApp.get(`${this.config.basePath}/papi/get_custom_file`, async (req, res) => {
-            let { custom_path, is_selected, file_name } = req.query
+            let { custom_path, is_selected, file_name, origin } = req.query
             custom_path = custom_path.replace(/\//g, '').replace(/\\/g, '').replace(/\./g, '')
             file_name = file_name.replace(/\//g, '').replace(/\\/g, '').replace(/\.\./g, '')
             try {
-                const sourceFilePath = path.join(
+                let sourceFilePath = path.join(
                     this.config.photoRoot, 'Custom', custom_path,
                     is_selected === 'true' ? 'selected' : '', file_name
                 )
                 if (!fs.existsSync(sourceFilePath)) {
                     res.sendStatus(404)
                     return
+                }
+
+                // 尝试找压缩的文件
+                if (!origin) {
+                    sourceFilePath = path.join(
+                        this.config.photoRoot, 'Custom', custom_path + '.compressed', file_name
+                    )
                 }
 
                 fs.readFile(sourceFilePath, (err, data) => {
@@ -444,10 +451,13 @@ class PhotoShareServer {
                     .toFile(path.join(outputDir, file), (err, info) => {
                         if (err) {
                             console.error(err)
+                        } else {
+                            
                         }
                         // console.log(info);
                         counter++
                         if (counter >= files.length) {
+                            fs.chmodSync(outputDir, 0o777);
                             resolve()
                             return
                         }

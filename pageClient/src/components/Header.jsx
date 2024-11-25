@@ -68,7 +68,7 @@ export default class FMHEADER extends React.Component {
             <div style={this.style()}>
                 {/* <div style={this.iconStyle()}></div> */}
                 <FMLabel
-                    text={'鱼昕草™Studio'}
+                    text={'鱼昕草®Studio'}
                     style={this.titleStyle()}
                     onMouseOver={e => { console.log(e.target.className) }} />
             </div>

@@ -2,8 +2,8 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
-const inputDir = '/mnt/home_sweet_home/Images/DeadFish/Friends/ZhaoQing/20240414-bohaiPark';
-const outputDir = '/mnt/home_sweet_home/Images/DeadFish/Friends/ZhaoQing/20240414-bohaiPark.compressed';
+const inputDir = '/mnt/home_sweet_home/Images/Custom/20241102-NianJiu';
+const outputDir = '/mnt/home_sweet_home/Images/Custom/20241102-NianJiu.compressed';
 
 if (fs.existsSync(outputDir) === true) {
     console.log('already compressed.')
